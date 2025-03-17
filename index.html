@@ -26,11 +26,17 @@
                 <h2>Protected API</h2>
             </div>
             <div class="card-body">
-                <p>This button will redirect to Auth0 login if you are not authenticated:</p>
-                <a href="https://kong-4660be7380uskbblx.kongcloud.dev/api/private" class="btn btn-success mb-3">Access Protected API</a>
-                <p class="mt-3">Or try direct API call (will fail if not authenticated):</p>
-                <button id="protected-btn" class="btn btn-warning mb-3">Try API Call</button>
+                <button id="protected-btn" class="btn btn-success mb-3">Fetch Protected Data</button>
                 <pre id="protected-result" class="bg-light p-3 border rounded">Results will appear here...</pre>
+            </div>
+        </div>
+
+        <div id="auth-info" class="card mb-4 d-none">
+            <div class="card-header">
+                <h2>Authentication Info</h2>
+            </div>
+            <div class="card-body">
+                <pre id="auth-details" class="bg-light p-3 border rounded">Authentication details will appear here...</pre>
             </div>
         </div>
     </div>
@@ -39,6 +45,20 @@
         $(document).ready(function() {
             // Kong Gateway URL
             const KONG_URL = "https://kong-4660be7380uskbblx.kongcloud.dev";
+            
+            // Check for auth code in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            
+            if (code && state) {
+                $('#auth-info').removeClass('d-none');
+                $('#auth-details').text(`Auth Code: ${code.substring(0, 5)}...\nState: ${state.substring(0, 5)}...\n\nAuthentication callback detected! You should now have an active session.`);
+                
+                // Clean URL by removing the auth params
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
             
             // Public API button
             $('#public-btn').click(function() {
@@ -58,7 +78,7 @@
                 });
             });
             
-            // Protected API button - just for testing API calls
+            // Protected API button - directly call API and handle redirection
             $('#protected-btn').click(function() {
                 $('#protected-result').text('Loading...');
                 $.ajax({
@@ -68,11 +88,15 @@
                         withCredentials: true
                     },
                     success: function(data) {
+                        // If we get a successful response, display the protected data
                         $('#protected-result').text(JSON.stringify(data, null, 2));
                     },
-                    error: function(xhr) {
+                    error: function(xhr, textStatus, errorThrown) {
+                        // If we get a 401/403, redirect to Kong's protected endpoint
                         if (xhr.status === 401 || xhr.status === 403) {
-                            $('#protected-result').text('Not authenticated. Use the green button to log in.');
+                            $('#protected-result').text('Not authenticated. Redirecting to login...');
+                            // Use window.location for the redirect to handle the OAuth flow
+                            window.location.href = KONG_URL + '/api/private';
                         } else {
                             $('#protected-result').text('Error: ' + xhr.status + ' ' + xhr.statusText);
                         }
