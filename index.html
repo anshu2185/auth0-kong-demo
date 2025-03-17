@@ -16,8 +16,8 @@
                 <h2>Public API</h2>
             </div>
             <div class="card-body">
-                <button id="public-btn" class="btn btn-primary mb-3">Fetch Public Data</button>
-                <pre id="public-result" class="bg-light p-3 border rounded">Results will appear here...</pre>
+                <a href="https://kong-4660be7380uskbblx.kongcloud.dev/api/public" target="_blank" class="btn btn-primary mb-3">Access Public API</a>
+                <p class="text-muted">Opens in new tab to avoid CORS issues</p>
             </div>
         </div>
         
@@ -26,106 +26,25 @@
                 <h2>Protected API</h2>
             </div>
             <div class="card-body">
-                <p class="mb-3">Click button below to authenticate and access protected data:</p>
-                <button id="protected-redirect-btn" class="btn btn-success mb-3">Access Protected API</button>
-                <p class="mt-3 mb-2">Once authenticated, try direct API call:</p>
-                <button id="fetch-protected-iframe" class="btn btn-warning mb-3">Fetch Protected Data (iFrame)</button>
-                <div id="response-container">
-                    <pre id="protected-result" class="bg-light p-3 border rounded">Results will appear here...</pre>
-                </div>
+                <p>This will redirect to Auth0 for authentication if needed:</p>
+                <a href="https://kong-4660be7380uskbblx.kongcloud.dev/api/private" target="_blank" class="btn btn-success mb-3">Access Protected API</a>
+                <p class="text-muted">Opens in new tab to avoid CORS issues</p>
             </div>
         </div>
 
-        <div id="auth-info" class="card mb-4 d-none">
+        <div class="card mb-4">
             <div class="card-header">
                 <h2>Authentication Status</h2>
             </div>
             <div class="card-body">
-                <div class="alert alert-success">
-                  Authentication successful! You should now be able to access protected APIs.
-                </div>
-                <pre id="auth-details" class="bg-light p-3 border rounded"></pre>
+                <p>The Auth0 flow should complete in the new tab. After authentication:</p>
+                <ol>
+                    <li>You should see your protected API data in the new tab</li>
+                    <li>This indicates Kong has successfully authenticated you via Auth0</li>
+                    <li>You can then continue using the protected API in that tab</li>
+                </ol>
             </div>
         </div>
-        
-        <!-- Hidden iframe for loading the protected content -->
-        <iframe id="api-iframe" style="display: none;"></iframe>
     </div>
-
-    <script>
-        $(document).ready(function() {
-            // Kong Gateway URL
-            const KONG_URL = "https://kong-4660be7380uskbblx.kongcloud.dev";
-            
-            // Check for auth code in URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            const state = urlParams.get('state');
-            
-            if (code && state) {
-                $('#auth-info').removeClass('d-none');
-                $('#auth-details').text(`Auth Code: ${code.substring(0, 5)}...\nState: ${state.substring(0, 5)}...\n\nThis page was loaded after successful authentication.`);
-                
-                // Clean URL by removing the auth params
-                const cleanUrl = window.location.pathname;
-                window.history.replaceState({}, document.title, cleanUrl);
-            }
-            
-            // Public API button
-            $('#public-btn').click(function() {
-                $('#public-result').text('Loading...');
-                $.ajax({
-                    url: KONG_URL + '/api/public',
-                    type: 'GET',
-                    xhrFields: {
-                        withCredentials: true
-                    },
-                    success: function(data) {
-                        $('#public-result').text(JSON.stringify(data, null, 2));
-                    },
-                    error: function(xhr) {
-                        $('#public-result').text('Error: ' + xhr.status + ' ' + xhr.statusText);
-                    }
-                });
-            });
-            
-            // Protected API direct access button (triggers authentication flow)
-            $('#protected-redirect-btn').click(function() {
-                // Direct redirection (no AJAX) to avoid CORS issues
-                window.location.href = KONG_URL + '/api/private';
-            });
-            
-            // Protected API with iframe approach
-            $('#fetch-protected-iframe').click(function() {
-                $('#protected-result').text('Loading protected data...');
-                
-                // Use iframe to load the protected content
-                const iframe = document.getElementById('api-iframe');
-                iframe.onload = function() {
-                    try {
-                        const iframeContent = iframe.contentDocument || iframe.contentWindow.document;
-                        // Try to extract the response
-                        const content = iframeContent.body.innerText || iframeContent.body.textContent;
-                        
-                        try {
-                            // Try to parse as JSON
-                            const jsonData = JSON.parse(content);
-                            $('#protected-result').text(JSON.stringify(jsonData, null, 2));
-                        } catch (e) {
-                            // If not JSON, show as is
-                            $('#protected-result').text(content);
-                        }
-                    } catch (e) {
-                        // If we can't access iframe content due to CORS, try alternative
-                        $('#protected-result').text('Could not access iframe content. Try accessing the API directly:');
-                        $('#response-container').append('<div class="mt-3"><a href="' + KONG_URL + '/api/private" target="_blank" class="btn btn-outline-primary">Open Protected API in New Tab</a></div>');
-                    }
-                };
-                
-                // Set iframe source with credentials
-                iframe.src = KONG_URL + '/api/private';
-            });
-        });
-    </script>
 </body>
 </html>
