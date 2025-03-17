@@ -26,17 +26,23 @@
                 <h2>Protected API</h2>
             </div>
             <div class="card-body">
-                <button id="protected-btn" class="btn btn-success mb-3">Fetch Protected Data</button>
+                <p class="mb-3">Click button below to authenticate and access protected data:</p>
+                <button id="protected-redirect-btn" class="btn btn-success mb-3">Access Protected API</button>
+                <p class="mt-3 mb-2">Once authenticated, try direct API call:</p>
+                <button id="protected-btn" class="btn btn-warning mb-3">Fetch Protected Data</button>
                 <pre id="protected-result" class="bg-light p-3 border rounded">Results will appear here...</pre>
             </div>
         </div>
 
         <div id="auth-info" class="card mb-4 d-none">
             <div class="card-header">
-                <h2>Authentication Info</h2>
+                <h2>Authentication Status</h2>
             </div>
             <div class="card-body">
-                <pre id="auth-details" class="bg-light p-3 border rounded">Authentication details will appear here...</pre>
+                <div class="alert alert-success">
+                  Authentication successful! You should now be able to access protected APIs.
+                </div>
+                <pre id="auth-details" class="bg-light p-3 border rounded"></pre>
             </div>
         </div>
     </div>
@@ -53,7 +59,7 @@
             
             if (code && state) {
                 $('#auth-info').removeClass('d-none');
-                $('#auth-details').text(`Auth Code: ${code.substring(0, 5)}...\nState: ${state.substring(0, 5)}...\n\nAuthentication callback detected! You should now have an active session.`);
+                $('#auth-details').text(`Auth Code: ${code.substring(0, 5)}...\nState: ${state.substring(0, 5)}...\n\nThis page was loaded after successful authentication.`);
                 
                 // Clean URL by removing the auth params
                 const cleanUrl = window.location.pathname;
@@ -78,7 +84,13 @@
                 });
             });
             
-            // Protected API button - directly call API and handle redirection
+            // Protected API direct access button (triggers authentication flow)
+            $('#protected-redirect-btn').click(function() {
+                // Direct redirection (no AJAX) to avoid CORS issues
+                window.location.href = KONG_URL + '/api/private';
+            });
+            
+            // Protected API AJAX button (only works after authentication)
             $('#protected-btn').click(function() {
                 $('#protected-result').text('Loading...');
                 $.ajax({
@@ -88,15 +100,11 @@
                         withCredentials: true
                     },
                     success: function(data) {
-                        // If we get a successful response, display the protected data
                         $('#protected-result').text(JSON.stringify(data, null, 2));
                     },
-                    error: function(xhr, textStatus, errorThrown) {
-                        // If we get a 401/403, redirect to Kong's protected endpoint
+                    error: function(xhr) {
                         if (xhr.status === 401 || xhr.status === 403) {
-                            $('#protected-result').text('Not authenticated. Redirecting to login...');
-                            // Use window.location for the redirect to handle the OAuth flow
-                            window.location.href = KONG_URL + '/api/private';
+                            $('#protected-result').text('Not authenticated. Use the green button to authenticate first.');
                         } else {
                             $('#protected-result').text('Error: ' + xhr.status + ' ' + xhr.statusText);
                         }
